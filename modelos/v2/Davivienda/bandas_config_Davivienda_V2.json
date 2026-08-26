@@ -1,0 +1,17 @@
+{
+  "t_bajo": 0.014820595712939349,
+  "t_alto": 0.4366491110275445,
+  "clases_probabilidad": {
+    "0": "baja",
+    "1": "media",
+    "2": "alta"
+  },
+  "band_pcts": [
+    25,
+    75
+  ],
+  "calibrated_at": "2026-08-11",
+  "n_calibracion": 230,
+  "umbral_youden": 0.7312485182855373,
+  "nota": "recalibrar mensualmente sobre últimos 90 días"
+}

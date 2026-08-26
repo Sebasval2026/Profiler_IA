@@ -1,9 +1,14 @@
-# Fijar las versiones exactas del entorno donde se entrenaron los .joblib:
-#   python3 -c "import sklearn; print(sklearn.__version__)"
-# Un joblib de sklearn NO es portable entre versiones mayores.
+# Fijar las versiones exactas del entorno donde se entrenaron los artefactos:
+#   python3 -c "import sklearn, catboost, lightgbm, xgboost; print(sklearn.__version__, catboost.__version__, lightgbm.__version__, xgboost.__version__)"
+# Un joblib NO es portable entre versiones mayores de su libreria.
+# macOS: lightgbm requiere libomp (brew install libomp).
 fastapi>=0.110
 uvicorn>=0.29
 scikit-learn
 pandas
 numpy
 joblib
+catboost
+lightgbm
+xgboost
+pyarrow          # extraccion de categorias de los modelos xgboost

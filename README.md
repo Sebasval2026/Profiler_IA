@@ -4,43 +4,53 @@ Estima, por entidad crediticia, la probabilidad de que a un solicitante le
 aprueben el crédito, en bandas: `0=baja · 1=media · 2=alta`. Corre después de
 la consulta a Datacrédito y **antes** de que el usuario elija plan de cuotas.
 
-El producto es enrutamiento: *"¿cuál entidad me aprueba?"*. La semántica de
-banda lo refleja: **alta = existe al menos un plan de cuotas con probabilidad
-alta** (barrido sobre 6/12/18/24/36); **baja = ningún plan alcanza**;
-**media = el sistema no se pronuncia**.
+El producto es enrutamiento: *"¿cuál entidad me aprueba?"*. Si no hay plazo
+elegido, se barren los planes 6/12/18/24/36 y se toma el máximo (max-plan).
 
-Versión actual del servicio y de los modelos: **v1.4** (`v1.4-contrato-min`).
+Versión actual: **v2.0-híbrido** — modelos de boosting por lender (pipeline
+v2, informe 2026-08-18) servidos con la arquitectura stateless de v1.
+**Todos los lenders emiten las 3 bandas**; el guardarraíl de calidad no es
+suprimir bandas sino el campo `modo_uso` (`decision` / `solo_descarte` /
+`ordenamiento`): donde la banda alta no es confiable, la clase 2 se rotula
+`"revision"` y nunca debe usarse como pre-aprobación. El servicio expone dos
+endpoints: `/v2/predict` (contrato v2, el vigente) y `/v1/profile` (contrato
+mínimo v1, retrocompatible).
 
 ## Stack y lenguajes
 
 | Capa | Tecnología |
 |---|---|
 | Servicio de inferencia | Python 3.10+ · FastAPI · Pydantic v2 · Uvicorn |
-| Modelos | scikit-learn (LogisticRegression, RandomForestClassifier, calibración isotónica) · pandas · joblib |
+| Modelos v2 | CatBoost · LightGBM · XGBoost (por lender, umbrales percentiles) |
+| Modelos v1 (Meddipay + fallback) | scikit-learn (logística/RF + calibración isotónica) |
 | Extracción de datos | SQL (PostgreSQL / RDS, queries as-of estrictas) |
-| Artefactos | `.joblib` (modelos), `politica.json` (bandas certificadas), `tasas.csv` (fallback) |
+| Artefactos | `.joblib` + `bandas_config` + `columnas_entrada` + `metadata` por modelo v2; `politica.json`, `tasas.csv` (v1) |
 | Tests | pytest |
 
-> Un `.joblib` de sklearn **no es portable entre versiones mayores**: fijar en
-> `requirements.txt` la versión exacta del entorno donde se entrenó
-> (`python3 -c "import sklearn; print(sklearn.__version__)"`).
+> Un `.joblib` **no es portable entre versiones mayores** de su librería:
+> fijar en `requirements.txt` las versiones exactas del entorno de
+> entrenamiento. En macOS, LightGBM requiere `brew install libomp`.
 
 ## Estructura
 
 ```
 ├── api/                  servicio FastAPI, stateless (sin conexión a base)
-│   ├── main.py           endpoints: POST /v1/profile · GET /health
-│   ├── esquemas.py       contrato Pydantic (extra=ignore)
-│   └── inferencia.py     core: features, historial, barrido max-plan, router
+│   ├── main.py           endpoints: POST /v2/predict · POST /v1/profile · GET /health
+│   ├── esquemas.py       contratos Pydantic v1 y v2 (extra=ignore)
+│   ├── inferencia.py     core v1: features, historial, max-plan, router, tasas
+│   └── inferencia_v2.py  core v2: derivación de features, boosters, modo_uso
 ├── entrenamiento/
-│   ├── entrenar.py       regenera los 4 .joblib (train/calib del corte A)
+│   ├── entrenar.py       regenera los 4 .joblib v1 (train/calib del corte A)
 │   └── manifiesto.py     hashes SHA-256 de los datasets → datos/MANIFIESTO.json
 ├── datos/
 │   ├── README.md         definiciones, trampas de datos, cómo regenerar
 │   ├── MANIFIESTO.json   versión de los datos: SHA-256 + filas de cada CSV
 │   └── extraccion/       queries as-of (features, tasas) — ver "Qué NO está en el repo"
-├── modelos/              artefactos versionados: 4 *.joblib, politica.json, tasas.csv
-└── tests/                contrato + prueba de consistencia entrenamiento↔servicio
+├── modelos/
+│   ├── v2/<Segmento>/    por modelo: model_*.joblib, bandas_config_*.json,
+│   │                     columnas_entrada_*.json, metadata_*.json
+│   └── ...               v1: 4 *.joblib, politica.json, tasas.csv
+└── tests/                contratos v1 y v2 + consistencia entrenamiento↔servicio
 ```
 
 ### Qué NO está en el repo (y dónde vive)
@@ -59,27 +69,56 @@ pip install -r requirements.txt
 uvicorn api.main:app --host 0.0.0.0 --port 8080
 ```
 
-Los artefactos (`modelos/*.joblib`, `politica.json`, `tasas.csv`) ya vienen en
-el repo; el servicio los carga al arrancar.
+Los artefactos (v1 y `modelos/v2/`) ya vienen en el repo; el servicio los
+carga al arrancar. Con `API_KEY_PERFILADOR` definida, `/v2/predict` exige el
+header `x-api-key`; sin definir, queda abierto (dev).
 
-- `GET /health` — estado, versión, modelos cargados y tamaño de la tabla de
-  tasas. `degraded` si falta algún `.joblib`.
-- `POST /v1/profile` — evalúa todos los lenders del payload y devuelve una
-  banda por lender.
+- `GET /health` — estado, versiones y modelos cargados. `degraded` si falta alguno.
+- `POST /v2/predict` — contrato v2: 3 bandas + `modo_uso` + umbrales por lender.
+- `POST /v1/profile` — contrato mínimo v1, retrocompatible.
 
 ```bash
-curl -X POST localhost:8080/v1/profile -H 'content-type: application/json' \
-     -d @tests/payload_ejemplo.json
+curl -X POST localhost:8080/v2/predict -H 'content-type: application/json' \
+     -d @tests/payload_ejemplo_v2.json
 ```
 
-Respuesta (contrato mínimo):
+Respuesta v2 (un resultado por lender; `banda_probabilidad` y
+`proba_autorizada` son listas: una posición por solicitud del batch):
 
 ```json
-{ "request_id": 987654,
-  "model_results": [
-    { "lender_id": 6, "prediction": { "approval_band": 1 } },
-    { "lender_id": 9, "prediction": { "approval_band": 2 } } ] }
+{ "model_results": [
+    { "lender_id": 9, "model_name": "Sistecredito_V2", "model_version": "2.0",
+      "calibrated_at": "2026-08-15",
+      "prediction": { "banda": 2, "banda_probabilidad": [2],
+        "proba_autorizada": [0.912340],
+        "clases": {"0": "baja", "1": "media", "2": "alta"},
+        "umbrales": {"t_bajo": 0.424378, "t_alto": 0.863461},
+        "modo_uso": "decision" } },
+    { "lender_id": 5, "model_name": "BancoBogota_V2", "model_version": "2.0",
+      "calibrated_at": "2026-08-14",
+      "prediction": { "banda": 2, "banda_probabilidad": [2],
+        "proba_autorizada": [0.747079],
+        "clases": {"0": "baja", "1": "media", "2": "revision"},
+        "umbrales": {"t_bajo": 0.151149, "t_alto": 0.535632},
+        "modo_uso": "solo_descarte" } } ],
+  "features_derivadas": { "income_best": 2800000, "amount_to_income": 1.6071,
+                          "has_experian": 1, "u_age": 35.3, "...": "..." },
+  "warnings": [] }
 ```
+
+Reglas del contrato v2 (detalle completo en el `CONTRATO_API_PERFILADOR_V2.md`
+del workspace de entrenamiento):
+
+- **Null ≠ 0**: un bureau sin respuesta se omite (objeto completo) o va con
+  campos `null`; enviar ceros falsea los flags `has_*` y los ratios.
+- El cliente manda **variables crudas**; las derivadas (`income_best`,
+  ratios, `user_tenure_days`, flags) las calcula el servicio y las devuelve
+  en `features_derivadas`.
+- `initial_fee`, `final_amount`, `amount_available`, `payment_amount` son
+  **leakage post-decisión**: se ignoran y se reporta warning.
+- `fee_number` es opcional (extensión híbrida): si es `null`, se barren los
+  planes y se devuelve `mejor_plan`.
+- `calibrated_at` con más de 45 días → warning `umbrales_desactualizados`.
 
 El servicio es **stateless**: no toca base de datos. Todo lo que necesita
 (incluido el historial del usuario) llega en el payload; los artefactos se
@@ -125,70 +164,74 @@ propósito — se midieron y no sobreviven la certificación.
 
 Ejemplo completo en `tests/payload_ejemplo.json`.
 
-## Arquitectura de decisión
+## Arquitectura de decisión (v2 híbrido)
 
 ```
-payload ──► FastAPI (valida, ignora extras)
-              │
-              ├─ deriva: antig_ctop, dias_ult, hist_lender (6 niveles)
-              │          score saneado (0/1 de Datacrédito = null)
-              │
-              ├─ Addi (6) ───► modelo propio (logística) · barrido max-plan
-              │                central (con score): alta+baja · thin: solo baja
-              ├─ Meddipay(39)► random forest · max-plan · solo baja (requiere score)
-              ├─ Su+pay (11)─► generalista (RF) · solo baja
-              └─ resto ──────► tasa observada (lender, comercio) por los
-                               mismos umbrales · media si no hay datos
+payload v2 ──► FastAPI (valida, ignora extras, detecta leakage)
+                 │
+                 ├─ deriva: u_age, user_tenure_days, income_best,
+                 │          ratios (amount/debt/payment_to_income,
+                 │          cc_utilization), flags has_*, 27 ex_*
+                 │
+                 ├─ Addi (6) ─────────► CatBoost   · decision
+                 ├─ Sistecrédito (9) ─► LightGBM   · decision
+                 ├─ B. de Bogotá (5) ─► CatBoost   · solo_descarte (2=revision)
+                 ├─ Brilla (19) ──────► CatBoost   · ordenamiento
+                 ├─ Davivienda (36) ──► CatBoost   · solo_descarte (2=revision)
+                 ├─ Meddipay (39) ────► modelo v1 (RF+isotónica, max-plan,
+                 │                      historial) · solo_descarte
+                 └─ resto ────────────► General_V2 (XGBoost) · decision
+                                        (12 entidades pequeñas: Su+pay,
+                                        Krediya, Vanti, Lagobo…)
 ```
 
 ## Inferencia: cómo predice cada modelo
 
-1. **Carga**: cada `.joblib` empaqueta `{pipe, iso, feats, umbrales, version}`
-   — pipeline sklearn (imputación + encoding + modelo), calibrador isotónico,
-   lista de features y umbrales.
-2. **Features**: se derivan del payload en `features_para()` — industria,
-   monto, edad, antigüedad en Creditop, días desde la última decisión, nivel
-   de historial y score saneado.
-3. **Predicción**: `pipe.predict_proba()` → probabilidad cruda →
-   `iso.predict()` → probabilidad calibrada.
-4. **Barrido max-plan**: el usuario aún no eligió cuotas, así que se evalúan
-   los planes `[6, 12, 18, 24, 36]` y se toma el máximo (`predecir_max`). El
-   generalista no usa `cuotas`.
-5. **Banda**: umbrales compartidos `UA=0.65` (alta) y `UB=0.35` (baja). Solo
-   se emiten las bandas **certificadas** del segmento; el resto cae a `media`.
-6. **Fallback sin modelo**: la tasa observada por (lender, comercio) pasa por
-   los mismos umbrales; con soporte `n < 50` cae a la tasa global del lender;
-   sin datos → `media`.
+1. **Carga**: cada modelo v2 empaqueta 4 archivos — `model_*.joblib`
+   (booster), `bandas_config_*.json` (`t_bajo`/`t_alto` percentiles +
+   `calibrated_at`), `columnas_entrada_*.json` y `metadata_*.json`. Al cargar
+   se extraen además las **categorías vistas en entrenamiento** (de
+   `pandas_categorical` en LightGBM y `get_categories` en XGBoost): un valor
+   categórico nuevo va a faltante en vez de reventar el booster.
+2. **Derivación**: el cliente manda crudo; `derivar()` en
+   `api/inferencia_v2.py` implementa la tabla del contrato (cascadas
+   Mareigua→AgilData→reportado, ratios con guardas de nulos, NaN preservado —
+   los boosters manejan faltantes nativamente, **nunca imputar a 0**).
+3. **Predicción**: `predict_proba` del booster; si no hay `fee_number`, se
+   barren los planes `[6,12,18,24,36]` y se toma el máximo (max-plan, v1).
+4. **Banda**: `p ≤ t_bajo → 0`, `p ≥ t_alto → 2`, en medio → 1. Los umbrales
+   son **por lender** (percentiles asimétricos) y se recalibran mensualmente
+   sobre los últimos 90 días; el contrato no cambia al recalibrar.
+5. **Guardarraíl `modo_uso`** — las 3 bandas siempre salen, pero con
+   instrucción de uso: `decision` (accionable), `solo_descarte` (solo la
+   banda baja es accionable; la 2 se rotula `revision`, nunca pre-aprobar),
+   `ordenamiento` (ranking suave, no decisión).
+6. **Fallback sin modelo cargado**: tasa observada (lender, comercio) de v1
+   por los umbrales 0.35/0.65, `modo_uso: ordenamiento`; con soporte `n < 50`
+   cae a la tasa global del lender; sin datos → banda 1.
 
-**Las bandas se certifican, no se configuran.** Una banda existe solo si pasó
-las compuertas — n≥30, precisión≥70 %, uplift sobre tasa base ≥5 pp — **en dos
-cortes temporales**. `modelos/politica.json` es el artefacto generado que dice
-qué banda emite cada segmento. Suprimir o habilitar bandas a mano está
-prohibido por diseño.
+## Los modelos y sus métricas (validación out-of-time)
 
-## Los cuatro modelos
+| Segmento | Modelo | AUC test | Acc. bandas 0y2 | Cobertura | modo_uso |
+|---|---|---|---|---|---|
+| Addi (6) | CatBoost | 0.816 | 0.857 | 0.55 | decision |
+| Sistecrédito (9) | LightGBM | 0.887 | 0.910 | 0.64 | decision (n_test=207: vigilar) |
+| Banco de Bogotá (5) | CatBoost | 0.893 | 0.766 | 0.40 | solo_descarte (prec. baja 0.99, alta 0.34) |
+| GENERAL (resto) | XGBoost | 0.912 | 0.964 | 0.48 | decision (entre lenders, no dentro de uno) |
+| Davivienda (36) | CatBoost | 0.769 | 0.784 | 0.53 | solo_descarte (n_test=96) |
+| Brilla (19) | CatBoost | 0.711 | 0.887 | 0.46 | ordenamiento (tasa base 0.88: medir lift) |
+| Meddipay (39) | RF v1 + isotónica | — | prec. baja 89 % (certif. v1) | — | solo_descarte |
 
-| Segmento | Algoritmo | Features | Bandas certificadas |
-|---|---|---|---|
-| addi_central | logística | industria, monto, edad, hist_lender, ex_score (+cuotas barrida) | alta + baja |
-| addi_thin | logística | industria, monto, edad, antig_ctop, dias_ult, hist_lender (+cuotas) | baja |
-| meddipay_central | random forest | como addi_central | baja |
-| generalista | random forest | + lender_id, sin cuotas | solo Su+pay: baja |
+Detalle completo en `metricas_finales_v2.csv` y metadata de cada modelo.
+Entrenamiento v2: ventanas de 12m con pesos de recencia (half-life 90 días),
+test = últimos 3 meses, auditoría adversarial de leakage (por eso
+`ur_initial_fee` y afines están prohibidos en el payload). **PayJoy quedó sin
+score** (leakage + deriva; su fallback al General también falló): cuando se
+confirme su `lender_id`, agregarlo a `SIN_SCORE` en `api/inferencia_v2.py`.
 
-Detalles de entrenamiento (`entrenamiento/entrenar.py`): logística
-`C=0.5, max_iter=3000` con one-hot (`min_frequency=30`) y estandarización;
-random forest `n_estimators=300, min_samples_leaf=15, random_state=42` con
-ordinal encoding. Imputación por mediana **con indicador de faltante** en
-ambos. Calibración isotónica sobre la ventana de calibración del corte A.
-
-Métricas de certificación (test temporal, ambos cortes): Addi central
-prec_alta 78,8/78,1 % · prec_baja 89,7/89,3 % · banda media ≈ 36 %. El detalle
-por segmento y corte vive en `modelos/politica.json`.
-
-**Por qué logística y no boosting:** se barrieron 4 algoritmos por segmento;
-en Addi la logística tiene *menor* error que los árboles (16,0 vs 20-22 %) y
-en Meddipay gana el random forest por 6 pp. El algoritmo es un hiperparámetro
-del segmento y el certificador lo re-decide cada mes.
+Los modelos v1 (logística/RF sklearn + isotónica, features de historial por
+lender, bandas certificadas por compuertas) siguen sirviendo `/v1/profile` y
+el segmento Meddipay; se regeneran con `entrenamiento/entrenar.py`.
 
 ## Versión de los datos
 
@@ -199,10 +242,15 @@ de dataset no es reproducible.
 
 | Dataset | Filas | Población |
 |---|---|---|
-| `features_6.csv` | 51.142 | Addi, solicitudes decididas desde 2025-08 |
-| `features_39.csv` | 15.539 | Meddipay |
-| `features_gen.csv` | 19.899 | 12 entidades del generalista |
+| `decisiones_creditop.csv` (v2) | 259.313 | todas las decididas ago-2023→2026-08, bureaus reconstruidos (Experian 21 %, AgilData 34 %, Mareigua 26 %) |
+| `features_6.csv` (v1) | 51.142 | Addi, solicitudes decididas desde 2025-08 |
+| `features_39.csv` (v1) | 15.539 | Meddipay |
+| `features_gen.csv` (v1) | 19.899 | 12 entidades del generalista |
 | `tasas.csv` | 267 | tasa observada por (lender, comercio), últimos 6 meses |
+
+Los modelos v2 se entrenaron sobre `decisiones_creditop.csv` (export de
+`bi_analysis.mv_master_creditop_request_selected` + Mareigua reconstruido);
+rango y config exactos por modelo en `modelos/v2/*/metadata_*.json`.
 
 Definiciones que **no se cambian sin recertificar** (detalle en
 `datos/README.md`):
@@ -274,3 +322,5 @@ datos) · `ur_final_amount` y afines: fuga por construcción.
 | ¿Qué pasó con el volumen de Sistecrédito post-mayo? ¿Qué cambió con DENTIX? | negocio |
 | Auditoría as-of de los flags `*_verified` (desbloquea Meddipay mejorado, −1,3 pp) | datos |
 | Migrar `certificar.py` y `datos/extraccion/*.sql` a este repo | tech |
+| Confirmar `lender_id` de PayJoy y agregarlo a `SIN_SCORE` (hoy caería al General, que falló para PayJoy) | datos |
+| Entrenar Meddipay en el pipeline v2 (hoy sirve el modelo v1) | datos |

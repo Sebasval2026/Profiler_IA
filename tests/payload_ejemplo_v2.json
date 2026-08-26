@@ -1,0 +1,49 @@
+{
+ "lenders": [6, 9, 5, 39, 11],
+ "solicitudes": [
+  {
+   "solicitud": {
+    "amount": 4500000,
+    "fee_number": null,
+    "fecha_solicitud": "2026-08-18T10:30:00-05:00",
+    "allied_id": 26,
+    "allied_industry_id": 3,
+    "allied_type_id": 1,
+    "credit_line_id": 1
+   },
+   "usuario": {
+    "date_of_birth": "1991-04-12",
+    "gender": "F",
+    "user_created_at": "2025-11-02T09:15:00-05:00"
+   },
+   "mareigua": {
+    "average_income": 2800000,
+    "average_income_reported": 2500000,
+    "continuity": 14,
+    "continuity_reported": 12,
+    "occupation": "Empleado"
+   },
+   "agildata": {
+    "average_income": 2650000,
+    "continuity": 11,
+    "age": 35,
+    "genre": "F"
+   },
+   "experian": {
+    "score": 742,
+    "total_debt_balance": 5300000,
+    "monthly_payment": 480000,
+    "current_disputes": 0,
+    "consulted_last_6_months": 2,
+    "cc_quantity": 1,
+    "cc_debt_balance": 700000,
+    "cc_available_balance": 1300000
+   },
+   "historial": {
+    "por_lender": {
+     "39": {"aprobadas": 1, "negadas": 0, "fecha_ultima_decidida": "2026-07-04T16:20:00-05:00"}
+    }
+   }
+  }
+ ]
+}
