@@ -1,7 +1,4 @@
-# Artefactos de produccion (no incluidos en el zip)
-
-Este directorio recibe los artefactos generados en la maquina de entrenamiento
-(~/creditop_modelo del Mac de Sebas, versionados en su git local):
+# Artefactos de produccion (versionados en este repo)
 
 - modelo_addi_central.joblib     (logistica, alta+baja certificadas)
 - modelo_addi_thin.joblib        (logistica, solo baja)

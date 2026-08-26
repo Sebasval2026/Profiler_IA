@@ -31,27 +31,24 @@ Versión actual del servicio y de los modelos: **v1.4** (`v1.4-contrato-min`).
 ├── api/                  servicio FastAPI, stateless (sin conexión a base)
 │   ├── main.py           endpoints: POST /v1/profile · GET /health
 │   ├── esquemas.py       contrato Pydantic (extra=ignore)
-│   └── inferencia.py     core: features, historial, barrido max-plan, router, sombra
+│   └── inferencia.py     core: features, historial, barrido max-plan, router
 ├── entrenamiento/
 │   ├── entrenar.py       regenera los 4 .joblib (train/calib del corte A)
 │   └── manifiesto.py     hashes SHA-256 de los datasets → datos/MANIFIESTO.json
 ├── datos/
 │   ├── README.md         definiciones, trampas de datos, cómo regenerar
+│   ├── MANIFIESTO.json   versión de los datos: SHA-256 + filas de cada CSV
 │   └── extraccion/       queries as-of (features, tasas) — ver "Qué NO está en el repo"
-├── modelos/              destino de artefactos: *.joblib, politica.json, tasas.csv
+├── modelos/              artefactos versionados: 4 *.joblib, politica.json, tasas.csv
 └── tests/                contrato + prueba de consistencia entrenamiento↔servicio
 ```
 
 ### Qué NO está en el repo (y dónde vive)
 
-- `modelos/*.joblib`, `politica.json`, `tasas.csv` — se generan en la máquina
-  de entrenamiento (ver `modelos/README.md`). Sin ellos el servicio arranca
-  `degraded` y sirve por tasa observada.
 - `datos/*.csv` — nunca se versionan; se versiona la query que los genera y su
   hash SHA-256 en `datos/MANIFIESTO.json`.
 - `entrenamiento/certificar.py` y `datos/extraccion/*.sql` — viven hoy en la
   máquina de entrenamiento; pendiente migrarlos a este repo.
-- `sombra.jsonl` — telemetría de runtime, va a almacenamiento persistente.
 
 ## Modos de uso
 
@@ -59,9 +56,11 @@ Versión actual del servicio y de los modelos: **v1.4** (`v1.4-contrato-min`).
 
 ```bash
 pip install -r requirements.txt
-# copiar artefactos a modelos/ (joblib, politica.json, tasas.csv)
 uvicorn api.main:app --host 0.0.0.0 --port 8080
 ```
+
+Los artefactos (`modelos/*.joblib`, `politica.json`, `tasas.csv`) ya vienen en
+el repo; el servicio los carga al arrancar.
 
 - `GET /health` — estado, versión, modelos cargados y tamaño de la tabla de
   tasas. `degraded` si falta algún `.joblib`.
@@ -73,7 +72,7 @@ curl -X POST localhost:8080/v1/profile -H 'content-type: application/json' \
      -d @tests/payload_ejemplo.json
 ```
 
-Respuesta (contrato mínimo — la telemetría completa va a `sombra.jsonl`):
+Respuesta (contrato mínimo):
 
 ```json
 { "request_id": 987654,
@@ -110,12 +109,6 @@ PG_URL=postgresql://... pytest tests/test_consistencia.py -q   # pre-release, re
 coincida 100 % con la window function de entrenamiento sobre 1.000 solicitudes
 históricas. Se salta si no hay `PG_URL`.
 
-### 4. Modo sombra
-
-`shadow: true` es el default del payload: cada request queda en `sombra.jsonl`
-con payload, bandas internas, probabilidad, mejor_plan y versión. **Montar ese
-archivo en almacenamiento persistente.**
-
 ## Contrato de entrada
 
 Campos no listados en `api/esquemas.py` se ignoran sin error (`extra=ignore`):
@@ -129,7 +122,6 @@ propósito — se midieron y no sobreviven la certificación.
 | `usuario.{age, user_created_at}` | sí | `13 < age < 120` |
 | `historial.por_lender` | no | **exhaustivo por contrato** (ver abajo) |
 | `experian.score` | no | 0 y 1 son códigos de Datacrédito → se tratan como null |
-| `shadow` | no | default `true` |
 
 Ejemplo completo en `tests/payload_ejemplo.json`.
 
@@ -257,14 +249,12 @@ La clasificación a 6 niveles (`primera_vez` … `negado_2mas_aqui`) vive en
 entrenamiento: `tests/test_consistencia.py` lo verifica sobre 1.000 casos
 históricos antes de cada release.
 
-## Sombra y recertificación
+## Recertificación
 
-- Salida de sombra (4-6 semanas): precisión por banda dentro de ±3 pp del
-  holdout y calibración ≤5 pp, dos semanas consecutivas.
-- **Recertificación mensual**: regenerar datasets → certificar (ventanas
-  rodantes) → nueva `politica.json` → `entrenar.py`. El incumbente siempre
-  compite. En cola: Quanto (oct 2026, 28 pp de recorrido univariado) y
-  PayJoy (nov 2026, cuando su historia alcance).
+**Mensual**: regenerar datasets → certificar (ventanas rodantes) → nueva
+`politica.json` → `entrenar.py`. El incumbente siempre compite. En cola:
+Quanto (oct 2026, 28 pp de recorrido univariado) y PayJoy (nov 2026, cuando
+su historia alcance).
 
 ## Decisiones cerradas con medición (no reabrir sin dato nuevo)
 
@@ -283,5 +273,4 @@ datos) · `ur_final_amount` y afines: fuga por construcción.
 | Costo relativo falso-"aplicá" vs "no sé" → umbrales dejan de ser 0,65/0,35 a dedo | negocio |
 | ¿Qué pasó con el volumen de Sistecrédito post-mayo? ¿Qué cambió con DENTIX? | negocio |
 | Auditoría as-of de los flags `*_verified` (desbloquea Meddipay mejorado, −1,3 pp) | datos |
-| `sombra.jsonl` a almacenamiento persistente | tech |
 | Migrar `certificar.py` y `datos/extraccion/*.sql` a este repo | tech |

@@ -44,7 +44,6 @@ class Payload(_Base):
     usuario: Usuario
     historial: Optional[Historial] = None
     experian: Optional[Experian] = None
-    shadow: bool = True
 
 
 class Prediction(BaseModel):

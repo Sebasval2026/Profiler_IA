@@ -13,10 +13,10 @@ Semantica de bandas (v1.4):
 El historial llega del cliente como conteos primitivos POR TODOS los lenders
 donde el usuario tiene solicitudes decididas (contrato: por_lender exhaustivo).
 La clasificacion a 6 niveles vive aca, en un solo lugar.
-"""
+"""  # ponytail: sin modo sombra — version basica; reintroducir si se necesita telemetria
 import csv
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import joblib
@@ -30,7 +30,6 @@ MAPA_BANDA = {'baja': 0, 'media': 1, 'alta': 2}
 
 RAIZ = Path(__file__).resolve().parent.parent
 DIR_MODELOS = RAIZ / 'modelos'
-LOG_SOMBRA = RAIZ / 'sombra.jsonl'
 
 # Bandas certificadas por segmento (salida de entrenamiento/certificar.py,
 # gates: n>=30, precision>=70, uplift>=5pp, en AMBOS cortes temporales).
@@ -176,15 +175,9 @@ def evaluar_lender(A, payload, lender_id):
 
 
 def evaluar(A, payload):
-    """Payload (dict ya validado) -> contrato minimo + registro en sombra."""
+    """Payload (dict ya validado) -> contrato minimo."""
     interno = [evaluar_lender(A, payload, l) for l in payload['lenders']]
-    resp = {'request_id': payload['request_id'],
+    return {'request_id': payload['request_id'],
             'model_results': [{'lender_id': x['lender_id'],
                                'prediction': {'approval_band': MAPA_BANDA.get(x['estado'], 1)}}
                               for x in interno]}
-    with open(LOG_SOMBRA, 'a') as f:
-        f.write(json.dumps({'ts': datetime.now(timezone.utc).isoformat(),
-                            'version': VERSION, 'req': payload,
-                            'interno': interno, 'resp': resp},
-                           default=str, ensure_ascii=False) + '\n')
-    return resp

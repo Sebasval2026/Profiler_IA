@@ -1,0 +1,37 @@
+{
+  "generado": "2026-08-17T21:14:43",
+  "ventana_extraccion": "2025-08-01 en adelante",
+  "target": "positivo = status 11 (Autorizada) · negativo = status 6 (Negada) · resto excluido",
+  "cortes_temporales": {
+    "corte_A": {
+      "train_hasta": "2026-04-01",
+      "calib_hasta": "2026-05-15"
+    },
+    "corte_B": {
+      "train_hasta": "2026-03-01",
+      "calib_hasta": "2026-04-10"
+    }
+  },
+  "datasets": {
+    "features_23.csv": {
+      "sha256": "4b4d79a7c8904884b9124bc24bdf973bcb69c2a22d83f304fe2ce331e5fc0443",
+      "filas": 9708,
+      "bytes": 1192210
+    },
+    "features_39.csv": {
+      "sha256": "0c02220abbcca2977dca7e43c127c3e90333120bb03ede6692eea5abd91c63ef",
+      "filas": 15539,
+      "bytes": 1954353
+    },
+    "features_6.csv": {
+      "sha256": "e9c31360b769681b65acfc93083f45229bee38d74980d0338be8d4aef4c70308",
+      "filas": 51142,
+      "bytes": 6550458
+    },
+    "features_9.csv": {
+      "sha256": "ac41ae4697635514c53ebfc016207b1256de0fc333ba5af6274185e9bc1b198f",
+      "filas": 13232,
+      "bytes": 1701511
+    }
+  }
+}

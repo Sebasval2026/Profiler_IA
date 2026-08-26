@@ -1,0 +1,567 @@
+{
+  "parametros": {
+    "MIN_N_BANDA": 30,
+    "UPLIFT_MIN": 5.0,
+    "PREC_MIN": 70.0,
+    "REGLA_TASA": 95.0,
+    "REGLA_DESVIO": 5.0,
+    "UA": 0.65,
+    "UB": 0.35,
+    "MIN_SPLIT": 60,
+    "CORTES": {
+      "A": [
+        "2026-04-01",
+        "2026-05-15"
+      ],
+      "B": [
+        "2026-03-01",
+        "2026-04-10"
+      ]
+    }
+  },
+  "addi_central": {
+    "ruta": "modelo",
+    "bandas_certificadas": [
+      "alta",
+      "baja"
+    ],
+    "detalle": {
+      "A": {
+        "base": 48.3,
+        "bandas": {
+          "alta": {
+            "ok": true,
+            "n": 1110,
+            "prec": 79.3,
+            "uplift": 31.0,
+            "motivo": "certificada"
+          },
+          "baja": {
+            "ok": true,
+            "n": 1001,
+            "prec": 89.2,
+            "uplift": 37.5,
+            "motivo": "certificada"
+          }
+        }
+      },
+      "B": {
+        "base": 50.4,
+        "bandas": {
+          "alta": {
+            "ok": true,
+            "n": 1612,
+            "prec": 78.3,
+            "uplift": 27.9,
+            "motivo": "certificada"
+          },
+          "baja": {
+            "ok": true,
+            "n": 1064,
+            "prec": 89.1,
+            "uplift": 39.5,
+            "motivo": "certificada"
+          }
+        }
+      }
+    }
+  },
+  "addi_thin": {
+    "ruta": "modelo",
+    "bandas_certificadas": [
+      "alta",
+      "baja"
+    ],
+    "detalle": {
+      "A": {
+        "base": 31.8,
+        "bandas": {
+          "alta": {
+            "ok": true,
+            "n": 182,
+            "prec": 75.8,
+            "uplift": 44.0,
+            "motivo": "certificada"
+          },
+          "baja": {
+            "ok": true,
+            "n": 3448,
+            "prec": 77.9,
+            "uplift": 9.7,
+            "motivo": "certificada"
+          }
+        }
+      },
+      "B": {
+        "base": 31.5,
+        "bandas": {
+          "alta": {
+            "ok": true,
+            "n": 268,
+            "prec": 76.5,
+            "uplift": 45.0,
+            "motivo": "certificada"
+          },
+          "baja": {
+            "ok": true,
+            "n": 5792,
+            "prec": 77.6,
+            "uplift": 9.1,
+            "motivo": "certificada"
+          }
+        }
+      }
+    }
+  },
+  "meddipay_central": {
+    "ruta": "modelo",
+    "bandas_certificadas": [
+      "alta"
+    ],
+    "detalle": {
+      "A": {
+        "base": 84.5,
+        "bandas": {
+          "alta": {
+            "ok": true,
+            "n": 521,
+            "prec": 90.6,
+            "uplift": 6.1,
+            "motivo": "certificada"
+          },
+          "baja": {
+            "ok": false,
+            "n": 116,
+            "prec": 37.1,
+            "uplift": 21.6,
+            "motivo": "prec 37.1<70"
+          }
+        }
+      },
+      "B": {
+        "base": 77.5,
+        "bandas": {
+          "alta": {
+            "ok": true,
+            "n": 664,
+            "prec": 89.0,
+            "uplift": 11.5,
+            "motivo": "certificada"
+          },
+          "baja": {
+            "ok": false,
+            "n": 203,
+            "prec": 56.2,
+            "uplift": 33.7,
+            "motivo": "prec 56.2<70"
+          }
+        }
+      }
+    }
+  },
+  "meddipay_thin": {
+    "ruta": "regla_informativa",
+    "bandas_certificadas": [],
+    "detalle": {
+      "A": {
+        "base": 82.7,
+        "bandas": {
+          "alta": {
+            "ok": false,
+            "n": 1081,
+            "prec": 82.7,
+            "uplift": 0.0,
+            "motivo": "uplift +0.0<5"
+          },
+          "baja": {
+            "ok": false,
+            "motivo": "sin casos"
+          }
+        }
+      },
+      "B": {
+        "base": 81.9,
+        "bandas": {
+          "alta": {
+            "ok": false,
+            "n": 1841,
+            "prec": 81.9,
+            "uplift": 0.0,
+            "motivo": "uplift +0.0<5"
+          },
+          "baja": {
+            "ok": false,
+            "motivo": "sin casos"
+          }
+        }
+      }
+    }
+  },
+  "welli_thin": {
+    "ruta": "regla_informativa",
+    "bandas_certificadas": [],
+    "detalle": {
+      "A": {
+        "base": 91.7,
+        "bandas": {
+          "alta": {
+            "ok": false,
+            "n": 1477,
+            "prec": 91.9,
+            "uplift": 0.2,
+            "motivo": "uplift +0.2<5"
+          },
+          "baja": {
+            "ok": false,
+            "motivo": "sin casos"
+          }
+        }
+      },
+      "B": {
+        "base": 91.3,
+        "bandas": {
+          "alta": {
+            "ok": false,
+            "n": 2350,
+            "prec": 91.7,
+            "uplift": 0.3,
+            "motivo": "uplift +0.3<5"
+          },
+          "baja": {
+            "ok": false,
+            "n": 9,
+            "prec": 33.3,
+            "uplift": 24.7,
+            "motivo": "n=9<30; prec 33.3<70"
+          }
+        }
+      }
+    }
+  },
+  "sistecredito_central": {
+    "ruta": "regla_informativa",
+    "bandas_certificadas": [],
+    "detalle": {
+      "A": {
+        "base": 60.0,
+        "bandas": {
+          "alta": {
+            "ok": true,
+            "n": 85,
+            "prec": 80.0,
+            "uplift": 20.0,
+            "motivo": "certificada"
+          },
+          "baja": {
+            "ok": false,
+            "n": 14,
+            "prec": 71.4,
+            "uplift": 31.4,
+            "motivo": "n=14<30"
+          }
+        }
+      },
+      "B": {
+        "insuficiente": true
+      }
+    }
+  },
+  "generalista_por_lender": {
+    "5": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': {'alta': {'ok': False, 'motivo': 'sin casos'}, 'baja': {'ok': False, 'n': 141, 'prec': np.float64(100.0), 'uplift': np.float64(0.0), 'motivo': 'uplift +0.0<5'}}, 'B': {'alta': {'ok': False, 'n': 2, 'prec': np.float64(0.0), 'uplift': np.float64(-1.4), 'motivo': 'n=2<30; prec 0.0<70; uplift -1.4<5'}, 'baja': {'ok': False, 'n': 211, 'prec': np.float64(98.6), 'uplift': np.float64(-0.0), 'motivo'"
+    },
+    "9": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': {'alta': {'ok': False, 'n': 133, 'prec': np.float64(69.2), 'uplift': np.float64(16.1), 'motivo': 'prec 69.2<70'}, 'baja': {'ok': False, 'n': 6, 'prec': np.float64(83.3), 'uplift': np.float64(36.4), 'motivo': 'n=6<30'}}, 'B': {'alta': {'ok': False, 'n': 295, 'prec': np.float64(56.9), 'uplift': np.float64(0.2), 'motivo': 'prec 56.9<70; uplift +0.2<5'}, 'baja': {'ok': False, 'n': 3, 'prec': np."
+    },
+    "11": {
+      "bandas_certificadas": [
+        "baja"
+      ],
+      "ruta": "modelo",
+      "detalle": "unica banda que certifica en ambos cortes con hist_gb; Su+pay aprueba 17.5%, la banda baja identifica los peores solicitantes"
+    },
+    "18": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': {'alta': {'ok': False, 'motivo': 'sin casos'}, 'baja': {'ok': False, 'n': 19, 'prec': np.float64(47.4), 'uplift': np.float64(-3.0), 'motivo': 'n=19<30; prec 47.4<70; uplift -3.0<5'}}, 'B': {'alta': {'ok': False, 'n': 188, 'prec': np.float64(48.4), 'uplift': np.float64(0.0), 'motivo': 'prec 48.4<70; uplift +0.0<5'}, 'baja': {'ok': False, 'motivo': 'sin casos'}}}"
+    },
+    "19": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': {'alta': {'ok': False, 'n': 214, 'prec': np.float64(89.3), 'uplift': np.float64(0.8), 'motivo': 'uplift +0.8<5'}, 'baja': {'ok': False, 'n': 1, 'prec': np.float64(0.0), 'uplift': np.float64(-11.5), 'motivo': 'n=1<30; prec 0.0<70; uplift -11.5<5'}}, 'B': {'alta': {'ok': False, 'n': 334, 'prec': np.float64(89.2), 'uplift': np.float64(0.0), 'motivo': 'uplift +0.0<5'}, 'baja': {'ok': False, 'mot"
+    },
+    "21": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': 'insuficiente', 'B': 'insuficiente'}"
+    },
+    "22": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': 'insuficiente', 'B': 'insuficiente'}"
+    },
+    "24": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': {'alta': {'ok': False, 'n': 264, 'prec': np.float64(95.8), 'uplift': np.float64(1.1), 'motivo': 'uplift +1.1<5'}, 'baja': {'ok': False, 'n': 1, 'prec': np.float64(100.0), 'uplift': np.float64(94.7), 'motivo': 'n=1<30'}}, 'B': {'alta': {'ok': False, 'n': 419, 'prec': np.float64(94.3), 'uplift': np.float64(0.0), 'motivo': 'uplift +0.0<5'}, 'baja': {'ok': False, 'motivo': 'sin casos'}}}"
+    },
+    "26": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': 'insuficiente', 'B': 'insuficiente'}"
+    },
+    "32": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': {'alta': {'ok': False, 'n': 1, 'prec': np.float64(100.0), 'uplift': np.float64(31.4), 'motivo': 'n=1<30'}, 'baja': {'ok': False, 'n': 5, 'prec': np.float64(80.0), 'uplift': np.float64(48.6), 'motivo': 'n=5<30'}}, 'B': {'alta': {'ok': False, 'n': 40, 'prec': np.float64(75.0), 'uplift': np.float64(2.3), 'motivo': 'uplift +2.3<5'}, 'baja': {'ok': False, 'n': 4, 'prec': np.float64(50.0), 'uplift"
+    },
+    "35": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': 'insuficiente', 'B': {'alta': {'ok': False, 'n': 7, 'prec': np.float64(28.6), 'uplift': np.float64(8.6), 'motivo': 'n=7<30; prec 28.6<70'}, 'baja': {'ok': False, 'n': 20, 'prec': np.float64(85.0), 'uplift': np.float64(5.0), 'motivo': 'n=20<30'}}}"
+    },
+    "36": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': {'alta': {'ok': False, 'motivo': 'sin casos'}, 'baja': {'ok': False, 'n': 65, 'prec': np.float64(66.2), 'uplift': np.float64(-0.0), 'motivo': 'prec 66.2<70; uplift -0.0<5'}}, 'B': {'alta': {'ok': False, 'n': 4, 'prec': np.float64(50.0), 'uplift': np.float64(17.3), 'motivo': 'n=4<30; prec 50.0<70'}, 'baja': {'ok': False, 'n': 89, 'prec': np.float64(70.8), 'uplift': np.float64(3.4), 'motivo': "
+    },
+    "123": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': 'insuficiente', 'B': 'insuficiente'}"
+    },
+    "161": {
+      "bandas_certificadas": [],
+      "ruta": "regla_informativa",
+      "detalle": "{'A': 'insuficiente', 'B': 'insuficiente'}"
+    }
+  },
+  "reglas": {
+    "Motai X": {
+      "tasa": 100.0,
+      "n_train": 478,
+      "estado": "certificada"
+    },
+    "DENTIX FINANCIAL SERVICES": {
+      "tasa": 100.0,
+      "n_train": 831,
+      "estado": "certificada"
+    },
+    "Crédito Directo X": {
+      "tasa": 96.5,
+      "n_train": 57,
+      "estado": "certificada"
+    },
+    "Celupresto": {
+      "tasa": 100.0,
+      "n_train": 342,
+      "estado": "certificada"
+    },
+    "Crediemo": {
+      "tasa": 100.0,
+      "n_train": 220,
+      "estado": "certificada"
+    },
+    "TuboletaTeCree": {
+      "tasa": 100.0,
+      "n_train": 83,
+      "estado": "sin datos de test"
+    },
+    "Welli T0": {
+      "tasa": 98.0,
+      "n_train": 403,
+      "estado": "sin datos de test"
+    },
+    "Mediarte x 0% Interés": {
+      "tasa": 100.0,
+      "n_train": 252,
+      "estado": "certificada"
+    },
+    "CrediPullman": {
+      "tasa": 99.7,
+      "n_train": 1463,
+      "estado": "certificada"
+    },
+    "Credi Idioma": {
+      "tasa": 100.0,
+      "n_train": 60,
+      "estado": "certificada"
+    },
+    "Welli TS": {
+      "tasa": 99.4,
+      "n_train": 178,
+      "estado": "sin datos de test"
+    },
+    "Mediarte X": {
+      "tasa": 100.0,
+      "n_train": 121,
+      "estado": "certificada"
+    },
+    "Crediteame": {
+      "tasa": 100.0,
+      "n_train": 52,
+      "estado": "sin datos de test"
+    }
+  },
+  "generalista_algoritmo": {
+    "elegido": "hist_gb",
+    "motivo": "logistica inestable entre cortes (13.4 vs 24.9); hist_gb 15.3/16.1",
+    "fecha": "2026-08-18"
+  },
+  "seleccion_algoritmos": {
+    "addi_central": {
+      "algoritmo": "logistica",
+      "bandas": [
+        "alta",
+        "baja"
+      ],
+      "errA": 16.01,
+      "errB": 17.41
+    },
+    "addi_thin": {
+      "algoritmo": "logistica",
+      "bandas": [
+        "alta",
+        "baja"
+      ],
+      "errA": 22.2,
+      "errB": 22.44
+    },
+    "meddipay_central": {
+      "algoritmo": "random_forest",
+      "bandas": [
+        "alta"
+      ],
+      "errA": 12.73,
+      "errB": 13.78
+    },
+    "meddipay_thin": {
+      "algoritmo": "logistica",
+      "bandas": [],
+      "errA": 17.3,
+      "errB": 18.14
+    },
+    "welli_thin": {
+      "algoritmo": "logistica",
+      "bandas": [],
+      "errA": 8.06,
+      "errB": 8.56
+    },
+    "generalista": {
+      "algoritmo": "random_forest",
+      "bandas_por_lender": [
+        [
+          11,
+          "baja"
+        ]
+      ],
+      "errA": 15.09,
+      "errB": 14.69
+    }
+  },
+  "iteracion_2026_08_18": {
+    "addi_central": {
+      "veredicto": "INCUMBENTE se mantiene (base6)",
+      "motivo": "convergida errA 17.33 vs incumbente 15.94; optimo local del greedy",
+      "features": [
+        "a_allied_industry_id",
+        "monto",
+        "cuotas",
+        "edad",
+        "hist_lender",
+        "ex_score"
+      ]
+    },
+    "addi_thin": {
+      "veredicto": "INCUMBENTE se mantiene (base7)",
+      "motivo": "convergida [cont_decl,cuotas] rechazada: 80 pct del lift era el canal de presencia del formulario (declaro=29.2 pct aprob vs no_declaro=44.7 pct); sin indicador colapsa a 26/29"
+    },
+    "meddipay_central": {
+      "veredicto": "MEJORA CONDICIONAL",
+      "features": [
+        "ex_score",
+        "hist_lender",
+        "ocup_verif",
+        "dias_ult"
+      ],
+      "algoritmo": "random_forest",
+      "errA": 12.2,
+      "errB": 12.84,
+      "incumbente": [
+        13.47,
+        13.79
+      ],
+      "condicion": "verificar que ocup_verif (join a Mareigua) sea as-of; si el flag usa consultas posteriores a la solicitud, hay fuga temporal y se revierte"
+    },
+    "pendiente_producto": "confirmar si el formulario se re-pregunta tras negacion; si si, usar primera respuesta y no ultima en la vista"
+  },
+  "v1_1_sin_cuotas": {
+    "motivo": "fee_number no existe al momento de la inferencia: el cliente aun no elige plan",
+    "addi_central": {
+      "errA": 16.41,
+      "errB": 17.28,
+      "bandas": [
+        "alta",
+        "baja"
+      ],
+      "costo_vs_con_cuotas": "+0.4pp"
+    },
+    "addi_thin": {
+      "errA": 22.61,
+      "errB": 22.67,
+      "bandas": [
+        "alta",
+        "baja"
+      ],
+      "costo": "+0.4pp"
+    },
+    "meddipay_central": {
+      "ruta": "tasa_informativa",
+      "motivo": "sin cuotas pierde certificacion: err 18.3 (+5.5pp), banda alta no pasa gates. Su politica depende del plan de pago."
+    },
+    "supay_baja_certificada": true
+  },
+  "v1_2_maxplan": {
+    "semantica": "alta = existe al menos un plan de cuotas con probabilidad alta; baja = ningun plan alcanza. Barrido sobre PLANES=[6,12,18,24,36] con el modelo entrenado con cuotas.",
+    "certificacion_ambos_cortes": {
+      "addi_central": {
+        "bandas": [
+          "alta",
+          "baja"
+        ],
+        "prec_alta": [
+          78.8,
+          78.1
+        ],
+        "prec_baja": [
+          89.7,
+          89.3
+        ],
+        "pct_alta": "36-39%"
+      },
+      "addi_thin": {
+        "bandas": [
+          "baja"
+        ],
+        "motivo_alta": "prec 68.7/69.1 < 70, a 1.2pp de certificar"
+      },
+      "meddipay_central": {
+        "bandas": [
+          "baja"
+        ],
+        "nota": "revive con la banda opuesta: ningun plan funciona, prec 78.1/84.6"
+      },
+      "generalista_supay": {
+        "bandas": [
+          "baja"
+        ],
+        "sin_cuotas": true
+      }
+    },
+    "respuesta_incluye": "mejor_plan (argmax del barrido) para uso de producto"
+  }
+}
