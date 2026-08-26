@@ -1,0 +1,9 @@
+# Fijar las versiones exactas del entorno donde se entrenaron los .joblib:
+#   python3 -c "import sklearn; print(sklearn.__version__)"
+# Un joblib de sklearn NO es portable entre versiones mayores.
+fastapi>=0.110
+uvicorn>=0.29
+scikit-learn
+pandas
+numpy
+joblib

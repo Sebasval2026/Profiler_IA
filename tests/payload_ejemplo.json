@@ -1,0 +1,31 @@
+{
+ "request_id": 987654,
+ "lenders": [6, 9, 5],
+ "solicitud": {
+  "amount": 4500000,
+  "fecha_solicitud": "2026-08-18T10:30:00-05:00",
+  "allied_id": 26,
+  "allied_industry_id": 3,
+  "allied_type_id": 1
+ },
+ "usuario": {
+  "age": 32,
+  "gender": "F",
+  "user_created_at": "2025-11-02T09:15:00-05:00"
+ },
+ "behavior": {
+  "average_income": {"value": 2800000, "is_verified": true},
+  "continuity": {"value": 14, "is_verified": true},
+  "occupation": {"value": "Empleado", "is_verified": false}
+ },
+ "historial": {
+  "n_solicitudes_decididas": 2,
+  "fecha_ultima_decidida": "2026-07-04T16:20:00-05:00",
+  "por_lender": {
+   "6": {"aprobadas": 1, "negadas": 1, "fecha_ultima_decidida": "2026-07-04T16:20:00-05:00"},
+   "9": {"aprobadas": 0, "negadas": 0, "fecha_ultima_decidida": null},
+   "5": {"aprobadas": 0, "negadas": 0, "fecha_ultima_decidida": null}
+  }
+ },
+ "experian": {"score": 742}
+}

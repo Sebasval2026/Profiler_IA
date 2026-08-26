@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+datos/*.csv
+modelos/*.joblib
+sombra.jsonl
+.venv/
+.DS_Store
