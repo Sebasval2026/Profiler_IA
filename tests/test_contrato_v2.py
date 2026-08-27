@@ -56,6 +56,15 @@ def test_tres_bandas_y_modo_uso(artefactos):
     assert 'campo_leakage_ignorado: initial_fee' in r['warnings']
 
 
+def test_payjoy_sin_score(artefactos):
+    A2, A1 = artefactos
+    r = inferencia_v2.evaluar_v2(A2, A1, {**PAYLOAD, 'lenders': [17]})
+    x = r['model_results'][0]
+    assert x['model_name'] == 'sin_score'
+    assert x['prediction']['modo_uso'] == 'sin_score'
+    assert x['prediction']['banda'] is None
+
+
 def test_resto_sirve_por_tasa_primero(artefactos):
     A2, A1 = artefactos
     # Welli (23) no tiene modelo propio pero sí tasa observada con soporte:

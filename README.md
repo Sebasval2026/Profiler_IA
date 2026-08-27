@@ -404,6 +404,6 @@ datos) · `ur_final_amount` y afines: fuga por construcción.
 | ¿Qué pasó con el volumen de Sistecrédito post-mayo? ¿Qué cambió con DENTIX? | negocio |
 | Auditoría as-of de los flags `*_verified` (desbloquea Meddipay mejorado, −1,3 pp) | datos |
 | Migrar `certificar.py` y `datos/extraccion/*.sql` a este repo | tech |
-| Confirmar `lender_id` de PayJoy y agregarlo a `SIN_SCORE` (hoy caería al General, que falló para PayJoy) | datos |
+| ~~Confirmar `lender_id` de PayJoy~~ — confirmado contra la base: **17**, ya responde `sin_score` | ✅ cerrado |
 | Entrenar Meddipay en el pipeline v2 (hoy sirve el modelo v1); su banda baja mostró degradación en la validación post-corte (1/6 aciertos, n chico — vigilar) | datos |
 | Joins de Experian/AgilData ROTOS en `mv_master_creditop_request_selected` para agosto-2026 (0,4 % de cobertura vs 64 % en julio; los datos SÍ existen en `migration.Risk_Central_*`) — arreglar antes de la próxima recertificación | datos |

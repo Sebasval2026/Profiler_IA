@@ -40,10 +40,10 @@ MEDDIPAY = 39
 MAPEO = {6: 'Addi_V2', 9: 'Sistecredito_V2', 5: 'BancoBogota_V2',
          19: 'Brilla_V2', 36: 'Davivienda_V2'}
 GENERAL = 'General_V2'
-# ponytail: PayJoy rechazado por el auditor v2 (leakage, AUC 0.56) y su
-# lender_id no está confirmado en ninguna fuente local; agregarlo aquí
-# cuando se confirme para responder sin_score en vez de caer al General.
-SIN_SCORE = set()
+# PayJoy (17): rechazado por el auditor v2 (leakage, AUC 0.56, deriva
+# 34->54 %); el contrato manda responder sin_score, no rutear al General.
+# lender_id confirmado contra la base (validación 2026-08-27).
+SIN_SCORE = {17}
 
 MODO_USO = {'Addi_V2': 'decision', 'Sistecredito_V2': 'decision',
             'General_V2': 'decision', 'BancoBogota_V2': 'solo_descarte',
