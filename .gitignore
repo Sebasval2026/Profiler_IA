@@ -3,3 +3,4 @@ __pycache__/
 datos/*.csv
 .venv/
 .DS_Store
+datos/validacion/

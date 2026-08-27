@@ -7,7 +7,7 @@ la consulta a Datacrédito y **antes** de que el usuario elija plan de cuotas.
 El producto es enrutamiento: *"¿cuál entidad me aprueba?"*. Si no hay plazo
 elegido, se barren los planes 6/12/18/24/36 y se toma el máximo (max-plan).
 
-Versión actual: **v2.0-híbrido** — modelos de boosting por lender (pipeline
+Versión actual: **v2.1-híbrido** — modelos de boosting por lender (pipeline
 v2, informe 2026-08-18) servidos con la arquitectura stateless de v1.
 **Todos los lenders emiten las 3 bandas**; el guardarraíl de calidad no es
 suprimir bandas sino el campo `modo_uso` (`decision` / `solo_descarte` /
@@ -41,6 +41,7 @@ mínimo v1, retrocompatible).
 │   └── inferencia_v2.py  core v2: derivación de features, boosters, modo_uso
 ├── entrenamiento/
 │   ├── entrenar.py       regenera los 4 .joblib v1 (train/calib del corte A)
+│   ├── validar_fresco.py evalúa el servicio sobre decisiones post-corte (base)
 │   └── manifiesto.py     hashes SHA-256 de los datasets → datos/MANIFIESTO.json
 ├── datos/
 │   ├── README.md         definiciones, trampas de datos, cómo regenerar
@@ -148,6 +149,17 @@ PG_URL=postgresql://... pytest tests/test_consistencia.py -q   # pre-release, re
 coincida 100 % con la window function de entrenamiento sobre 1.000 solicitudes
 históricas. Se salta si no hay `PG_URL`.
 
+### 4. Validación post-corte contra la base
+
+```bash
+PG_URL=postgresql://... python3 entrenamiento/validar_fresco.py 2026-08-18
+```
+
+Exporta las decisiones posteriores a la fecha, reconstruye bureaus as-of e
+historial, y corre cada solicitud por el mismo camino del servicio. Ver la
+sección **Validación post-corte**. Los CSV quedan en `datos/validacion/`
+(gitignored: contienen ids de usuario).
+
 ## Contrato de entrada
 
 Campos no listados en `api/esquemas.py` se ignoran sin error (`extra=ignore`):
@@ -180,9 +192,9 @@ payload v2 ──► FastAPI (valida, ignora extras, detecta leakage)
                  ├─ Davivienda (36) ──► CatBoost   · solo_descarte (2=revision)
                  ├─ Meddipay (39) ────► modelo v1 (RF+isotónica, max-plan,
                  │                      historial) · solo_descarte
-                 └─ resto ────────────► General_V2 (XGBoost) · decision
-                                        (12 entidades pequeñas: Su+pay,
-                                        Krediya, Vanti, Lagobo…)
+                 └─ resto ────────────► tasa observada (lender, comercio)
+                                        · decision — y General_V2 (XGBoost)
+                                        de respaldo cuando no hay tasa
 ```
 
 ## Inferencia: cómo predice cada modelo
@@ -206,9 +218,12 @@ payload v2 ──► FastAPI (valida, ignora extras, detecta leakage)
    instrucción de uso: `decision` (accionable), `solo_descarte` (solo la
    banda baja es accionable; la 2 se rotula `revision`, nunca pre-aprobar),
    `ordenamiento` (ranking suave, no decisión).
-6. **Fallback sin modelo cargado**: tasa observada (lender, comercio) de v1
-   por los umbrales 0.35/0.65, `modo_uso: ordenamiento`; con soporte `n < 50`
-   cae a la tasa global del lender; sin datos → banda 1.
+6. **El "resto" se sirve por tasa observada primero** (lender, comercio, de
+   v1, umbrales 0.35/0.65; con soporte `n < 50` cae a la tasa global del
+   lender): en la validación post-corte le ganó al General_V2 en esa
+   población — son lenders que aprueban ~95 % y la señal es la política del
+   lender, no el individuo. El General_V2 queda de **respaldo** cuando no hay
+   tasa (lender o comercio nuevo); sin tasa ni modelo → banda 1.
 
 ## Los modelos y sus métricas (validación out-of-time)
 
@@ -217,7 +232,7 @@ payload v2 ──► FastAPI (valida, ignora extras, detecta leakage)
 | Addi (6) | CatBoost | 0.816 | 0.857 | 0.55 | decision |
 | Sistecrédito (9) | LightGBM | 0.887 | 0.910 | 0.64 | decision (n_test=207: vigilar) |
 | Banco de Bogotá (5) | CatBoost | 0.893 | 0.766 | 0.40 | solo_descarte (prec. baja 0.99, alta 0.34) |
-| GENERAL (resto) | XGBoost | 0.912 | 0.964 | 0.48 | decision (entre lenders, no dentro de uno) |
+| GENERAL (respaldo del resto) | XGBoost | 0.912 | 0.964 | 0.48 | decision — solo cuando no hay tasa observada (ver validación) |
 | Davivienda (36) | CatBoost | 0.769 | 0.784 | 0.53 | solo_descarte (n_test=96) |
 | Brilla (19) | CatBoost | 0.711 | 0.887 | 0.46 | ordenamiento (tasa base 0.88: medir lift) |
 | Meddipay (39) | RF v1 + isotónica | — | prec. baja 89 % (certif. v1) | — | solo_descarte |
@@ -232,6 +247,35 @@ confirme su `lender_id`, agregarlo a `SIN_SCORE` en `api/inferencia_v2.py`.
 Los modelos v1 (logística/RF sklearn + isotónica, features de historial por
 lender, bandas certificadas por compuertas) siguen sirviendo `/v1/profile` y
 el segmento Meddipay; se regeneran con `entrenamiento/entrenar.py`.
+
+## Validación post-corte (decisiones que los modelos nunca vieron)
+
+`entrenamiento/validar_fresco.py` evalúa el servicio completo (derivación
+incluida) sobre decisiones reales posteriores a una fecha, leídas de la base:
+
+```bash
+PG_URL=postgresql://... python3 entrenamiento/validar_fresco.py 2026-08-18
+```
+
+Resultado sobre 2026-08-18..25 (n=1.400, post-corte de entrenamiento), con el
+enrutamiento v2.1:
+
+| | n | AUC | Acc. 0y2 | Prec. alta | Prec. baja | Cobertura |
+|---|---|---|---|---|---|---|
+| **Global** | 1.400 | **0.934** | 0.952 | 0.970 | 0.838 | 0.82 |
+| Addi_V2 | 426 | 0.772 | 0.848 | 0.857 | 0.843 | 0.47 |
+| tasa_observada (resto) | 909 | 0.915 | 0.981 | 0.982 | 0.955 | 0.99 |
+| Meddipay_V1 | 37 | 0.829 | 0.829 | 0.966 | 0.167 ⚠️ | 0.95 |
+
+Hallazgos que definieron el enrutamiento v2.1: la accuracy de Addi calcó la
+del informe (0.848 vs 0.857 — sin overfit), y en el "resto" (tasa base ~95 %)
+la **tasa observada le ganó al General_V2** sobre las mismas 814 solicitudes
+(prec. alta 98,5 vs 97,1 % · cobertura 98 vs 31 % · negadas reales atrapadas
+21 vs 13 de 41 · AUC 0.93 vs 0.74) — el uplift del booster sobre la tasa base
+(+2 pp) no habría pasado la compuerta de certificación de v1 (≥5 pp). Por eso
+el General quedó de respaldo. Sistecrédito/BdB/Davivienda/Brilla no tuvieron
+volumen esa semana (n=3-14): pendiente confirmarlos con más historia. La
+banda baja de Meddipay_V1 falló (1/6, n chico): vigilar en la recertificación.
 
 ## Versión de los datos
 

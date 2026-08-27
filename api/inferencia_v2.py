@@ -12,6 +12,12 @@ v2 puro:
     el modelo v1 de Meddipay, que v2 no cubre.
   - Meddipay (39) se sirve con el modelo v1 (logit/RF + isotónica); su banda
     alta no certificó, así que va como solo_descarte (clase 2 = revision).
+  - El "resto" (sin modelo propio) se sirve PRIMERO por tasa observada
+    (lender, comercio) y el General_V2 queda de respaldo sin tasa: en la
+    validación post-corte (2026-08-18..25, n=814) la tasa le ganó al booster
+    en esa población (prec. alta 98.5 vs 97.1, cobertura 98 vs 31 %, AUC
+    0.93 vs 0.74) — son lenders que aprueban ~95 % y la señal es la política
+    del lender, no el individuo.
 
 Siempre se emiten las 3 bandas; el guardarraíl es modo_uso, no la supresión.
 """
@@ -25,7 +31,7 @@ import pandas as pd
 
 from . import inferencia as v1
 
-VERSION_V2 = 'v2.0-hibrido'
+VERSION_V2 = 'v2.1-hibrido'
 DIR_V2 = v1.DIR_MODELOS / 'v2'
 DIAS_RECALIBRACION = 45          # calibrated_at más viejo -> warning
 LEAKAGE = ('initial_fee', 'final_amount', 'amount_available', 'payment_amount')
@@ -245,7 +251,7 @@ def _resultado(lender_id, model_name, bandas_l, probas, clases, umbrales,
 
 
 def _tasa_fallback(A1, lender_id, fila):
-    """Sin modelo aplicable: tasa observada (lender, comercio) — v1."""
+    """Tasa observada (lender, comercio) — v1; con soporte n<50 cae al global."""
     aid = fila.get('_allied_id')
     n, t = A1['tasas'].get((lender_id, aid), (0, None)) if aid is not None else (0, None)
     if n < v1.MIN_N_TASA:
@@ -253,6 +259,19 @@ def _tasa_fallback(A1, lender_id, fila):
     if t is None:
         return 1, None, 'sin_historia'
     return _banda_v1(t), t, 'tasa_observada'
+
+
+def _evaluar_tasa(A1, lender_id, filas):
+    """Servidor primario del "resto". None si alguna fila queda sin tasa
+    (el lender pasa completo al General_V2)."""
+    bandas_l, probas = [], []
+    for fila in filas:
+        b, t, _ = _tasa_fallback(A1, lender_id, fila)
+        if t is None:
+            return None
+        bandas_l.append(b); probas.append(t)
+    return _resultado(lender_id, 'tasa_observada', bandas_l, probas, CLASES,
+                      {'t_bajo': v1.UB, 't_alto': v1.UA}, 'decision', v1.VERSION)
 
 
 def _evaluar_meddipay(A1, filas):
@@ -305,7 +324,13 @@ def evaluar_v2(A2, A1, payload):
         if lid == MEDDIPAY:
             results.append(_evaluar_meddipay(A1, filas))
             continue
-        nombre = MAPEO.get(lid, GENERAL)
+        nombre = MAPEO.get(lid)
+        if nombre is None:
+            res = _evaluar_tasa(A1, lid, filas)
+            if res is not None:
+                results.append(res)
+                continue
+            nombre = GENERAL   # sin tasa (comercio/lender nuevo): respaldo
         m = A2.get(nombre)
         if m is None:
             warnings.append('modelo_no_disponible: %s' % nombre)

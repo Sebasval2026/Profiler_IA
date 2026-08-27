@@ -56,6 +56,17 @@ def test_tres_bandas_y_modo_uso(artefactos):
     assert 'campo_leakage_ignorado: initial_fee' in r['warnings']
 
 
+def test_resto_sirve_por_tasa_primero(artefactos):
+    A2, A1 = artefactos
+    # Welli (23) no tiene modelo propio pero sí tasa observada con soporte:
+    # debe servirse por tasa (validación post-corte), no por el General.
+    r = inferencia_v2.evaluar_v2(A2, A1, {**PAYLOAD, 'lenders': [23]})
+    x = r['model_results'][0]
+    assert x['model_name'] == 'tasa_observada'
+    assert x['prediction']['modo_uso'] == 'decision'
+    assert x['prediction']['banda'] in (0, 1, 2)
+
+
 def test_maxplan_sin_fee_number(artefactos):
     A2, A1 = artefactos
     p = {'lenders': [6],
