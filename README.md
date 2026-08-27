@@ -255,9 +255,9 @@ payload v2 ──► FastAPI (valida, ignora extras, detecta leakage)
 Detalle completo en `metricas_finales_v2.csv` y metadata de cada modelo.
 Entrenamiento v2: ventanas de 12m con pesos de recencia (half-life 90 días),
 test = últimos 3 meses, auditoría adversarial de leakage (por eso
-`ur_initial_fee` y afines están prohibidos en el payload). **PayJoy quedó sin
-score** (leakage + deriva; su fallback al General también falló): cuando se
-confirme su `lender_id`, agregarlo a `SIN_SCORE` en `api/inferencia_v2.py`.
+`ur_initial_fee` y afines están prohibidos en el payload). **PayJoy (17)
+quedó sin score** (leakage + deriva; su fallback al General también falló):
+responde `modo_uso: "sin_score"` — id confirmado contra la base.
 
 Los modelos v1 (logística/RF sklearn + isotónica, features de historial por
 lender, bandas certificadas por compuertas) siguen sirviendo `/v1/profile` y
