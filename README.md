@@ -121,6 +121,21 @@ del workspace de entrenamiento):
   planes y se devuelve `mejor_plan`.
 - `calibrated_at` con más de 45 días → warning `umbrales_desactualizados`.
 
+Payload mínimo (usuario thin, sin bureaus — también decide):
+
+```bash
+curl -s -X POST localhost:8080/v2/predict -H 'content-type: application/json' -d '{
+  "lenders": [6, 23],
+  "solicitudes": [{
+    "solicitud": {"amount": 800000, "fecha_solicitud": "2026-08-27T10:00:00-05:00",
+                  "allied_id": 26, "allied_industry_id": 3},
+    "usuario": {"age": 24}}]}'
+# → bandas por lender + "warnings": ["sin_bureau_de_ingresos"]
+```
+
+El contrato completo está probado end-to-end en `tests/test_api_v2.py`
+(respuesta, thin, leakage, validación 422, auth y retrocompatibilidad v1).
+
 El servicio es **stateless**: no toca base de datos. Todo lo que necesita
 (incluido el historial del usuario) llega en el payload; los artefactos se
 cargan una sola vez al arrancar desde `modelos/`.
@@ -276,6 +291,29 @@ la **tasa observada le ganó al General_V2** sobre las mismas 814 solicitudes
 el General quedó de respaldo. Sistecrédito/BdB/Davivienda/Brilla no tuvieron
 volumen esa semana (n=3-14): pendiente confirmarlos con más historia. La
 banda baja de Meddipay_V1 falló (1/6, n chico): vigilar en la recertificación.
+
+### Desglose thin vs con-bureau (misma validación)
+
+**Addi** (90 % del tráfico fresco de Addi es thin — sin score):
+
+| Subpoblación | n | Base | AUC | Prec. alta | Prec. baja | Cobertura |
+|---|---|---|---|---|---|---|
+| Sin score (thin/demográfico) | 385 | 42 % | 0.746 | 0.820 (n=61) | 0.832 (n=113) | 0.45 |
+| Con score (central) | 41 | 61 % | 0.935 | 1.000 (n=16) | 1.000 (n=8) | 0.59 |
+
+La banda alta thin de Addi **no existía en v1** (prec. 68,7/69,1 % < 70, no
+certificó); el Addi_V2 la sirve al 82 % fresco. Su banda baja también mejoró
+(83,2 % vs 77,9 % certificado en v1) pese a una tasa base más exigente.
+
+**Segmento general** (71 % de sus usuarios no tienen ningún bureau): el
+servidor actual (tasa observada) no usa bureaus, así que rinde igual para
+thin (prec. alta 99,3 %, AUC 0.90 sin ningún bureau). Se verificó además que
+el General_V2 pierde contra la tasa **también en la subpoblación con score**
+(AUC 0.646 vs 0.951) — no hay ningún subgrupo del resto donde convenga
+desviar al booster.
+
+Salvedades: una semana de datos; las celdas de banda baja tienen n=3-16
+(direccional). Consolidar repitiendo `validar_fresco.py` semanalmente.
 
 ## Versión de los datos
 
