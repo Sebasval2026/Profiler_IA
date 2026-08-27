@@ -193,6 +193,65 @@ Ejemplo completo en `tests/payload_ejemplo.json`.
 
 ## Arquitectura de decisión (v2 híbrido)
 
+### Qué modelo sirve a cada lender
+
+| lender_id | Lender | Servidor | Algoritmo | modo_uso | clase 2 |
+|---|---|---|---|---|---|
+| 6 | Addi | `Addi_V2` | CatBoost | decision | alta |
+| 9 | Sistecrédito | `Sistecredito_V2` | LightGBM | decision | alta |
+| 5 | Banco de Bogotá | `BancoBogota_V2` | CatBoost | solo_descarte | **revision** |
+| 19 | Brilla | `Brilla_V2` | CatBoost | ordenamiento | alta |
+| 36 | Davivienda | `Davivienda_V2` | CatBoost | solo_descarte | **revision** |
+| 39 | Meddipay | `Meddipay_V1` (con score) / tasa (sin) | RF sklearn + isotónica | solo_descarte | **revision** |
+| 17 | PayJoy | ninguno | — | sin_score | no emite banda |
+| resto | ~35 lenders | tasa observada (lender, comercio) | frecuencia | decision | alta |
+| resto sin tasa | lender/comercio nuevo | `General_V2` | XGBoost | decision | alta |
+
+El mapeo vive en `MAPEO`, `SIN_SCORE` y `MEDDIPAY` de `api/inferencia_v2.py`;
+los umbrales de banda de cada servidor, en su `bandas_config_*.json`
+(percentiles por lender) o en `UA/UB = 0.65/0.35` para las rutas v1.
+
+### Árbol de decisión: del contrato a la banda
+
+Por cada `lender_id` del payload, en este orden:
+
+```
+1. ¿lender_id ∈ SIN_SCORE (PayJoy=17)?
+   └─ sí ► modo_uso "sin_score", banda null. Fin. (Modelo rechazado por
+           auditoría: leakage + deriva. NUNCA rutear al General.)
+
+2. ¿lender_id == 39 (Meddipay)?
+   ├─ ¿experian.score presente Y saneado?          ◄── "con score" se define
+   │    (saneado: 0 y 1 son códigos de                 SOLO aquí: presencia de
+   │     Datacrédito → cuentan como null)              experian.score > 1
+   ├─ sí ► Meddipay_V1: features v1 (industria, monto, edad, antig_ctop,
+   │       días desde última decisión, historial por lender del payload,
+   │       score) · max-plan si no hay fee_number · umbrales 0.35/0.65
+   └─ no ► tasa observada (39, allied_id)
+
+3. ¿lender_id ∈ MAPEO {6, 9, 5, 19, 36}?
+   └─ sí ► su modelo V2. AQUÍ NO HAY BIFURCACIÓN con/sin score: es el
+           mismo booster para todos — los bureaus ausentes entran como
+           NaN (nativo en CatBoost/LightGBM/XGBoost) y el modelo ve
+           además los flags has_experian/has_agildata/has_mareigua.
+           El "thin" de Addi es implícito: mismo modelo, features vacías.
+           · max-plan si fee_number es null · banda por t_bajo/t_alto
+             del bandas_config del lender
+
+4. resto ► escalera de tasas:
+   ├─ ¿tasa (lender_id, allied_id) con soporte n ≥ 50?  ► esa
+   ├─ si no ¿tasa global del lender (lender_id, -1)?    ► esa
+   │        · banda por 0.35/0.65 · no usa bureaus ni demografía:
+   │          la señal es la política del lender (validado post-corte)
+   ├─ si no ► General_V2 (XGBoost, respaldo: comercio/lender nuevo)
+   └─ si tampoco hay modelo ► banda 1 (media, "sin_historia")
+```
+
+En resumen: **"con score / sin score" solo bifurca la ruta en Meddipay** (su
+modelo v1 exige score). Los modelos v2 nunca bifurcan — tratan el faltante
+como información (NaN + flags `has_*`), por eso el contrato exige null y
+nunca 0. La tasa observada y PayJoy ignoran el score por completo.
+
 ```
 payload v2 ──► FastAPI (valida, ignora extras, detecta leakage)
                  │
@@ -200,13 +259,15 @@ payload v2 ──► FastAPI (valida, ignora extras, detecta leakage)
                  │          ratios (amount/debt/payment_to_income,
                  │          cc_utilization), flags has_*, 27 ex_*
                  │
+                 ├─ PayJoy (17) ──────► sin_score (no emite banda)
                  ├─ Addi (6) ─────────► CatBoost   · decision
                  ├─ Sistecrédito (9) ─► LightGBM   · decision
                  ├─ B. de Bogotá (5) ─► CatBoost   · solo_descarte (2=revision)
                  ├─ Brilla (19) ──────► CatBoost   · ordenamiento
                  ├─ Davivienda (36) ──► CatBoost   · solo_descarte (2=revision)
-                 ├─ Meddipay (39) ────► modelo v1 (RF+isotónica, max-plan,
-                 │                      historial) · solo_descarte
+                 ├─ Meddipay (39) ────► con score: modelo v1 (RF+isotónica,
+                 │                      max-plan, historial) · solo_descarte
+                 │                      sin score: tasa observada
                  └─ resto ────────────► tasa observada (lender, comercio)
                                         · decision — y General_V2 (XGBoost)
                                         de respaldo cuando no hay tasa
